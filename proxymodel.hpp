@@ -6,7 +6,7 @@
 
 
 
-class ProxyModel : QSortFilterProxyModel
+class ProxyModel : public QSortFilterProxyModel
 {
 public:
     explicit ProxyModel(QObject *parent);
@@ -25,12 +25,16 @@ public:
 
     void clearFilters();
 
+protected:
+    bool filterAcceptsRow(int source_row,
+                          const QModelIndex &source_parent) const override;
 private:
     int m_minimumZipcode;
     int m_maxmimumZipcode;
     int InvalidZipcode;
     QString m_state;
     QString m_county;
+
 
 };
 

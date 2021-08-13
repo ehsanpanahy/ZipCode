@@ -6,12 +6,12 @@
 #include "mainwindow.hpp"
 #include "proxymodel.hpp"
 #ifdef CUSTOM_MODEL
-    #include "tablemodel.hpp"
+#include "tablemodel.h"
 #else
 #include "standardtablemodel.hpp"
 #endif
 #ifdef MODEL_TEST
-    #include <modeltest.h>
+#include <modeltest.h>
 #endif
 #include "uniqueproxymodel.hpp"
 #include <QApplication>
@@ -35,9 +35,19 @@ const int StatusTimeout = AQP::MSecPerSecond * 10;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), loading(false)
 {
+
+#ifdef CUSTOM_MODEL
+    model = new TableModel(this);
+#else
     model= new StandardTableModel(this);
-    proxymodel = new ProxyModel(this);
-    proxymodel->setSourceModel(model);
+#endif
+
+#ifdef MODEL_TEST
+    (void) new ModelTest(model, this)
+#endif
+
+    proxyModel = new ProxyModel(this);
+    proxyModel->setSourceModel(model);
 
     createWidgets();
     createComboBoxModels();
@@ -45,7 +55,7 @@ MainWindow::MainWindow(QWidget *parent)
     createConnections();
     AQP::accelerateWidget(this);
 
-    setWindowTitle(tr("%1 (QstandardModel[*]").arg(QApplication::applicationName()));
+    setWindowTitle(tr("%1 (Custom Model)[*]").arg(QApplication::applicationName()));
     statusBar()->showMessage(tr("Ready"), StatusTimeout);
 
 }
@@ -58,13 +68,9 @@ MainWindow::~MainWindow()
 void MainWindow::addZipcode()
 {
     dontFilterOrSelectRadioButton->click();
-    QList<QStandardItem*> items;
-    QStandardItem *zipItem = new QStandardItem;
-    zipItem->setData(MinZipcode, Qt::EditRole);
-    items << zipItem;
-    for (int i = 0; i < model->columnCount() - 1; ++i)
-        items << new QStandardItem(tr("(Unknown)"));
-    model->appendRow(items);
+    if(!model->insertRow(model->rowCount()))
+        return;
+
     tableView->scrollToBottom();
     tableView->setFocus();
     QModelIndex index = proxyModel->index(proxyModel->rowCount() - 1,
@@ -87,8 +93,8 @@ void MainWindow::deleteZipcode()
     int zipcode = model->data(model->index(index.row,
                                            Zipcode)).toInt();
     if (!AQP::okToDelete(this, tr("Delete Zipcode"),
-        tr("Delete Zipcode %1?").arg(zipcode, 5, 10, QChar('0'))))
-    return;
+                         tr("Delete Zipcode %1?").arg(zipcode, 5, 10, QChar('0'))))
+        return;
 
     bool filtered = filterRadioButton->isChecked();
     bool selected = selectByCriteriaRadioButton->isChecked();
@@ -139,26 +145,26 @@ void MainWindow::createWidgets()
 {
     buttonBox = new QDialogButtonBox;
     loadButton = buttonBox->addButton(tr("Load..."),
-            QDialogButtonBox::AcceptRole);
+                                      QDialogButtonBox::AcceptRole);
     saveButton = buttonBox->addButton(tr("&Save"),
-            QDialogButtonBox::AcceptRole);
+                                      QDialogButtonBox::AcceptRole);
     saveButton->setEnabled(false);
     addButton = buttonBox->addButton(tr("Add"),
-            QDialogButtonBox::ActionRole);
+                                     QDialogButtonBox::ActionRole);
     addButton->setEnabled(false);
     deleteButton = buttonBox->addButton(tr("Delete..."),
-            QDialogButtonBox::ActionRole);
+                                        QDialogButtonBox::ActionRole);
     deleteButton->setEnabled(false);
     quitButton = buttonBox->addButton(tr("Quit"),
-            QDialogButtonBox::ApplyRole);
+                                      QDialogButtonBox::ApplyRole);
 
     filterSelectGroupBox = new QGroupBox(tr("Filter or Select"));
     dontFilterOrSelectRadioButton = new QRadioButton(
-            tr("Don't Filter or Select"));
+                tr("Don't Filter or Select"));
     filterRadioButton = new QRadioButton(tr("Filter"));
     filterRadioButton->setChecked(true);
     selectByCriteriaRadioButton = new QRadioButton(
-            tr("Select by Criteria"));
+                tr("Select by Criteria"));
     minimumZipLabel = new QLabel(tr("Min. Zip:"));
     minimumZipSpinBox = new QSpinBox;
     minimumZipLabel->setBuddy(minimumZipSpinBox);
@@ -209,8 +215,8 @@ void MainWindow::createConnections()
 {
 #ifdef CUSTOM_MODEL
     connect(model,
-        SIGNAL(dataChanged(const QModelIndex&, const QModelIndex&)),
-        this, SLOT(setDirty()));
+            SIGNAL(dataChanged(const QModelIndex&, const QModelIndex&)),
+            this, SLOT(setDirty()));
 #else
     connect(model, SIGNAL(itemChanged(QStandardItem*)),
             this, SLOT(setDirty()));
@@ -254,7 +260,7 @@ void MainWindow::createConnections()
     connect(saveButton, SIGNAL(clicked()), this, SLOT(save()));
     connect(addButton, SIGNAL(clicked()), this, SLOT(addZipcode()));
     connect(deleteButton, SIGNAL(clicked()),
-        this, SLOT(deleteZipcode()));
+            this, SLOT(deleteZipcode()));
     connect(quitButton, SIGNAL(clicked()), this, SLOT(close()));
 
 }
@@ -270,15 +276,13 @@ bool MainWindow::matchingColumn(const QString &value, int row, int column)
 
 void MainWindow::restoreFilters()
 {
-    proxymodel->setMinimumZipcode(minimumZipSpinBox->value());
     proxyModel->setMinimumZipcode(minimumZipSpinBox->value());
     proxyModel->setMaximumZipcode(maximumZipSpinBox->value());
     proxyModel->setCounty(countyGroupBox->isChecked()
-        ? countyComboBox->currentText() : QString());
+                          ? countyComboBox->currentText() : QString());
     proxyModel->setState(stateGroupBox->isChecked()
-    ? stateComboBox->currentText() : QString());
+                         ? stateComboBox->currentText() : QString());
     reportFilterEffect();
-
 }
 
 void MainWindow::reportFilterEffect()

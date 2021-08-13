@@ -19,6 +19,7 @@ class StandardTableModel;
 #endif
 class ProxyModel;
 
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -43,6 +44,8 @@ private slots:
     void selectionChanged();
 
 private:
+    TableModel *model;
+    ProxyModel *proxyModel;
     QDialogButtonBox *buttonBox;
     QPushButton *loadButton;
     QPushButton *saveButton;
